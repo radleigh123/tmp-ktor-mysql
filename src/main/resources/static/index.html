@@ -2,70 +2,66 @@
 <head>
     <title>Demo Web App for Person</title>
     <script type="application/javascript">
-        function displayAllTasks() {
-            clearTasksTable();
-            fetchAllTasks().then(displayTasks)
+        function displayAllPersons() {
+            clearPersonsTable();
+            fetchAllPersons().then(displayPersons)
         }
 
-        function displayTasksWithPriority() {
-            clearTasksTable();
-            const priority = readTaskPriority();
-            fetchTasksWithPriority(priority).then(displayTasks)
-        }
-
-        function displayTask(name) {
-            fetchTaskWithName(name).then(t =>
-                taskDisplay().innerHTML
-                    = `${t.priority} priority task ${t.name} with description "${t.description}"`
-            )
-        }
-
-        function deleteTask(name) {
-            deleteTaskWithName(name).then(() => {
-                clearTaskDisplay();
-                displayAllTasks();
+        function displayPersonWithId() {
+            const id = document.personIdForm.id.value;
+            fetchPersonById(id).then(person => {
+                if (person) {
+                    personDisplay().innerHTML = `Person ${person.name}, age: ${person.age}, email: ${person.email}`;
+                    clearPersonsTable();
+                    displayPersons([person]);
+                } else {
+                    personDisplay().innerHTML = "Person not found";
+                    clearPersonsTable();
+                }
             })
         }
 
-        function deleteTaskWithName(name) {
-            return sendDELETE(`/tasks/${name}`)
+        function deletePerson(id) {
+            deletePersonWithId(id).then(() => {
+                clearPersonDisplay();
+                displayAllPersons();
+            })
         }
 
-        function addNewTask() {
-            const task = buildTaskFromForm();
-            sendPOST("/tasks", task).then(displayAllTasks);
+        function deletePersonWithId(id) {
+            return sendDELETE(`/person/${id}`)
         }
 
-        function buildTaskFromForm() {
+        function addPerson() {
+            const person = buildPersonFromForm();
+            sendPOST("/person", person).then(displayAllPersons);
+        }
+
+        function buildPersonFromForm() {
             return {
-                name: getTaskFormValue("newTaskName"),
-                description: getTaskFormValue("newTaskDescription"),
-                priority: getTaskFormValue("newTaskPriority")
+                id: 0, // Will be assigned by the server
+                name: getPersonFormValue("newPersonName"),
+                age: parseInt(getPersonFormValue("newPersonAge")),
+                email: getPersonFormValue("newPersonEmail"),
+                phone: getPersonFormValue("newPersonPhone"),
+                address: getPersonFormValue("newPersonAddress")
             }
         }
 
-        function getTaskFormValue(controlName) {
-            return document.addTaskForm[controlName].value;
+        function getPersonFormValue(controlName) {
+            return document.addPersonForm[controlName].value;
         }
 
-        function taskDisplay() {
-            return document.getElementById("currentTaskDisplay");
+        function personDisplay() {
+            return document.getElementById("currentPersonDisplay");
         }
 
-        function readTaskPriority() {
-            return document.priorityForm.priority.value
+        function fetchPersonById(id) {
+            return sendGET(`/person/byId/${id}`);
         }
 
-        function fetchTasksWithPriority(priority) {
-            return sendGET(`/tasks/byPriority/${priority}`);
-        }
-
-        function fetchTaskWithName(name) {
-            return sendGET(`/tasks/byName/${name}`);
-        }
-
-        function fetchAllTasks() {
-            return sendGET("/tasks")
+        function fetchAllPersons() {
+            return sendGET("/person")
         }
 
         function sendGET(url) {
@@ -94,32 +90,34 @@
             });
         }
 
-        function tasksTable() {
-            return document.getElementById("tasksTableBody");
+        function personsTable() {
+            return document.getElementById("personsTableBody");
         }
 
-        function clearTasksTable() {
-            tasksTable().innerHTML = "";
+        function clearPersonsTable() {
+            personsTable().innerHTML = "";
         }
 
-        function clearTaskDisplay() {
-            taskDisplay().innerText = "None";
+        function clearPersonDisplay() {
+            personDisplay().innerText = "None";
         }
 
-        function displayTasks(tasks) {
-            const tasksTableBody = tasksTable()
-            tasks.forEach(task => {
-                const newRow = taskRow(task);
-                tasksTableBody.appendChild(newRow);
+        function displayPersons(persons) {
+            const personsTableBody = personsTable()
+            persons.forEach(person => {
+                const newRow = personRow(person);
+                personsTableBody.appendChild(newRow);
             });
         }
 
-        function taskRow(task) {
+        function personRow(person) {
             return tr([
-                td(task.name),
-                td(task.priority),
-                td(viewLink(task.name)),
-                td(deleteLink(task.name)),
+                td(person.id),
+                td(person.name),
+                td(person.age),
+                td(person.email),
+                td(viewLink(person.id)),
+                td(deleteLink(person.id)),
             ]);
         }
 
@@ -139,71 +137,67 @@
             return node;
         }
 
-        function viewLink(taskName) {
+        function viewLink(personId) {
             const node = document.createElement("a");
             node.setAttribute(
-                "href", `javascript:displayTask("${taskName}")`
+                "href", `javascript:fetchPersonById(${personId}).then(person => personDisplay().innerHTML = JSON.stringify(person))`
             )
             node.appendChild(document.createTextNode("view"));
             return node;
         }
 
-        function deleteLink(taskName) {
+        function deleteLink(personId) {
             const node = document.createElement("a");
             node.setAttribute(
-                "href", `javascript:deleteTask("${taskName}")`
+                "href", `javascript:deletePerson(${personId})`
             )
             node.appendChild(document.createTextNode("delete"));
             return node;
         }
     </script>
 </head>
-<body onload="displayAllTasks()">
-<h1>Task Manager Client</h1>
-<form action="javascript:displayAllTasks()">
-    <span>View all the tasks</span>
+<body onload="displayAllPersons()">
+<h1>Person Management</h1>
+<form action="javascript:displayAllPersons()">
+    <span>View all people</span>
     <input type="submit" value="Go">
 </form>
-<form name="priorityForm" action="javascript:displayTasksWithPriority()">
-    <span>View tasks with priority</span>
-    <select name="priority">
-        <option name="Low">Low</option>
-        <option name="Medium">Medium</option>
-        <option name="High">High</option>
-        <option name="Vital">Vital</option>
-    </select>
+<form name="personIdForm" action="javascript:displayPersonWithId()">
+    <span>View person with ID</span>
+    <input type="number" name="id" min="1">
     <input type="submit" value="Go">
 </form>
-<form name="addTaskForm" action="javascript:addNewTask()">
-    <span>Create new task with</span>
-    <label for="newTaskName">name</label>
-    <input type="text" id="newTaskName" name="newTaskName" size="10">
-    <label for="newTaskDescription">description</label>
-    <input type="text" id="newTaskDescription" name="newTaskDescription" size="20">
-    <label for="newTaskPriority">priority</label>
-    <select id="newTaskPriority" name="newTaskPriority">
-        <option name="Low">Low</option>
-        <option name="Medium">Medium</option>
-        <option name="High">High</option>
-        <option name="Vital">Vital</option>
-    </select>
+<form name="addPersonForm" action="javascript:addPerson()">
+    <span>Create new person with</span>
+    <label for="newPersonName">Name</label>
+    <input type="text" id="newPersonName" name="newPersonName" size="10">
+    <label for="newPersonAge">Age</label>
+    <input type="number" id="newPersonAge" name="newPersonAge" min="1">
+    <label for="newPersonEmail">Email</label>
+    <input type="email" id="newPersonEmail" name="newPersonEmail" size="20">
+    <label for="newPersonPhone">Phone</label>
+    <input type="text" id="newPersonPhone" name="newPersonPhone" size="15">
+    <label for="newPersonAddress">Address</label>
+    <input type="text" id="newPersonAddress" name="newPersonAddress" size="20">
     <input type="submit" value="Go">
 </form>
 <hr>
 <div>
-    Current task is <em id="currentTaskDisplay">None</em>
+    Current person: <em id="currentPersonDisplay">None</em>
 </div>
 <hr>
 <table>
     <thead>
     <tr>
+        <th>ID</th>
         <th>Name</th>
-        <th>Priority</th>
+        <th>Age</th>
+        <th>Email</th>
         <th></th>
         <th></th>
     </tr>
     </thead>
-    <tbody id="tasksTableBody">
+    <tbody id="personsTableBody">
     </tbody>
 </table>
 </body>
